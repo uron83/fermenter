@@ -1,16 +1,20 @@
 /*
 */
+
+#ifndef  _DEBUG
+//#define _DEBUG
+#endif // ! _DEBUG
+
 #include "Peltier.h"
-#define DEBUG   //If you comment this line, the DPRINT & DPRINTLN lines are defined as blank.
 
 //Libraries
 #include <LiquidCrystal.h>
-#include <DHT.h>;
+#include <DHT_U.h>
 #include "LcdKeypad.h"
 #include "Peltier.h"
 
 #ifndef DPRINT
-#ifdef DEBUG    //Macros are usually in all capital letters.
+#ifdef _DEBUG    //Macros are usually in all capital letters.
 #define DPRINT(...)    Serial.print(__VA_ARGS__)     //DPRINT is a macro, debug print
 #define DPRINTLN(...)  Serial.println(__VA_ARGS__)   //DPRINTLN is a macro, debug print with new line
 #else
@@ -21,8 +25,8 @@
 
 #define  INSIDE_SCREEN 0
 #define  OUTSIDE_SCREEN 1
-#define  MIN_SCREEN 2
-#define  MAX_SCREEN 3
+#define  TEMP_SCREEN 2
+#define  DELAY_SCREEN 3
 
 #define  INSIDE_DHT 0
 #define  OUTSIDE_DHT 1
@@ -39,6 +43,8 @@
 #define SCREEN_UPDATE_RATE 300
 #define TEMP_MIN_LIMIT 12
 #define TEMP_MAX_LIMIT 35
+
+#define TEMP_RANGE 1
 
 
 //Constants
@@ -59,6 +65,7 @@ int tempMax = 25;
 
 unsigned long lastOutput = 0;
 unsigned long lastScreenUpd = 0;
+unsigned long delaySecs = 30;
 
 void setup() {
 
@@ -68,10 +75,10 @@ void setup() {
 	//pinMode(11, OUTPUT);
 	//digitalWrite(11, HIGH);
 
-	screenTitles[INSIDE_SCREEN] = "     Inside     ";
-	screenTitles[OUTSIDE_SCREEN] = "     Outside    ";
-	screenTitles[MIN_SCREEN] = "    Min Temp    ";
-	screenTitles[MAX_SCREEN] = "    Max Temp    ";
+	screenTitles[INSIDE_SCREEN] = "    Inside      ";
+	screenTitles[OUTSIDE_SCREEN] = "    Outside     ";
+	screenTitles[TEMP_SCREEN] = "  Temperature   ";
+	screenTitles[DELAY_SCREEN] = "     Delay      ";
 
 	dhtIn.begin();
 	dhtOut.begin();
@@ -85,70 +92,92 @@ void setup() {
 
 void loop() {
 
-	int x = lcd.readValue();
-	currentTemp[INSIDE_DHT] = dhtIn.readTemperature();
-	currentTemp[OUTSIDE_DHT] = dhtOut.readTemperature();
+	// read temperature and humidity.
+	readSensors();
 
-	currentHum[INSIDE_DHT] = dhtIn.readHumidity();
-	currentHum[OUTSIDE_DHT] = dhtOut.readHumidity();
+	// read input and process user input.
+	processUserInput();
+
+	// turn petier on or off.
+	togglePeltier();
+
+	// refresh screen.
+	updateScreen(false);
+
+	// execute every 1000ms aprox
+	if (millis() - lastOutput > 1000) {
+		lastOutput += 1000;
+
+		// code here is executed every 1s.
+
+		// updates timer
+		unsigned long prev = delaySecs;
+		delaySecs = delaySecs <= 0 ? 0 : delaySecs - 1;
+
+		if (delaySecs == 0 && prev > 0) {
+			setScreen(INSIDE_SCREEN);
+		}
+	}
+
+}
+
+void processUserInput()
+{
+	int x = lcd.readValue();
 
 	lcd.autoToggleBacklight();
 
 	if (lcd.isRightPressed()) {
-		DPRINT("Rigth");
+		DPRINT("Rigth ");
 		setScreen(++currentScreen);
 	}
 	else if (lcd.isLeftPressed()) {
-		DPRINT("Left");
+		DPRINT("Left ");
 		setScreen(--currentScreen);
 	}
 	else if (lcd.isSelectPressed()) {
-		DPRINT("Select");
-		setScreen(0);
+		DPRINT("Select ");
+		setScreen(delaySecs > 0 ? DELAY_SCREEN : INSIDE_SCREEN);
 	}
 	else if (lcd.isUpPressed()) {
-		if (currentScreen == MIN_SCREEN) {
-			tempMin = tempMin >= TEMP_MAX_LIMIT - 1 ? TEMP_MAX_LIMIT - 1 : tempMin + 1;
+		if (currentScreen == TEMP_SCREEN) {
+			tempMin = tempMin >= TEMP_MAX_LIMIT ? TEMP_MAX_LIMIT : tempMin + 1;
+			tempMax = tempMin + TEMP_RANGE;
 
-			if (tempMin >= tempMax)
-			{
-				tempMax = tempMin + 1;
-			}
-		}
-		else if (currentScreen == MAX_SCREEN) {
-			tempMax = tempMax >= TEMP_MAX_LIMIT ? TEMP_MAX_LIMIT : tempMax + 1;
+			DPRINT("Up -");
+			DPRINT(" Screen ");
+			DPRINT(currentScreen);
+			DPRINT(" - Temp Min:");
+			DPRINT(tempMin);
+			DPRINT(" - Temp Max:");
+			DPRINTLN(tempMax);
 		}
 
-		DPRINT("Up -");
-		DPRINT(" Screen ");
-		DPRINT(currentScreen);
-		DPRINT(" - Temp Min:");
-		DPRINT(tempMin);
-		DPRINT(" - Temp Max:");
-		DPRINTLN(tempMax);
+		if (currentScreen == DELAY_SCREEN) {
+			long maxDelay = 10 * 60 * 60; //10h
+			long increment = 600;// 10min
+			delaySecs = delaySecs + increment >= maxDelay ? maxDelay : delaySecs += increment;
+		}
 
 		updateScreen(true);
 	}
 	else if (lcd.isDownPressed()) {
-		if (currentScreen == MIN_SCREEN) {
+		if (currentScreen == TEMP_SCREEN) {
 			tempMin = tempMin <= TEMP_MIN_LIMIT ? TEMP_MIN_LIMIT : tempMin - 1;
-		}
-		else if (currentScreen == MAX_SCREEN) {
-			tempMax = tempMax <= TEMP_MIN_LIMIT + 1 ? TEMP_MIN_LIMIT + 1 : tempMax - 1;
+			tempMax = tempMin + TEMP_RANGE;
 
-			if (tempMin >= tempMax)
-			{
-				tempMin = tempMax - 1;
-			}
+			DPRINT("Down -");
+			DPRINT(" Screen ");
+			DPRINT(currentScreen);
+			DPRINT(" - Temp Min:");
+			DPRINT(tempMin);
+			DPRINT(" - Temp Max:");
+			DPRINTLN(tempMax);
 		}
 
-		DPRINT("Down -");
-		DPRINT(" Screen ");
-		DPRINT(currentScreen);
-		DPRINT(" - Temp Min:");
-		DPRINT(tempMin);
-		DPRINT(" - Temp Max:");
-		DPRINTLN(tempMax);
+		if (currentScreen == DELAY_SCREEN) {
+			delaySecs = delaySecs <= 60 ? 0 : delaySecs - 60;
+		}
 
 		updateScreen(true);
 	}
@@ -158,39 +187,23 @@ void loop() {
 	{
 		delay(300);
 	}
+}
 
-	togglePeltier();
+void readSensors()
+{
+	currentTemp[INSIDE_DHT] = dhtIn.readTemperature();
+	currentTemp[OUTSIDE_DHT] = dhtOut.readTemperature();
 
-	updateScreen(false);
-
-	// print every 1000ms aprox
-	if (millis() - lastOutput > 1000) {
-		lastOutput += 1000;
-		char buff[8];
-
-		//DPRINTLN(millis());
-		//DPRINT("Temp in: ");
-		//DPRINT(f(buff, currentTemp[0]));
-		//DPRINT("c out: ");
-		//DPRINT(f(buff, currentTemp[1]));
-		//DPRINTLN("c");
-
-
-		//DPRINT("Hum in: ");
-		//DPRINT(currentHum[0]);
-		//DPRINT("% out: ");
-		//DPRINT(currentHum[1]);
-		//DPRINTLN("%");
-	}
-
+	currentHum[INSIDE_DHT] = dhtIn.readHumidity();
+	currentHum[OUTSIDE_DHT] = dhtOut.readHumidity();
 }
 
 void setScreen(int screenNumber) {
 
 	if (screenNumber < INSIDE_SCREEN) {
-		screenNumber = MAX_SCREEN;
+		screenNumber = DELAY_SCREEN;
 	}
-	else if (screenNumber > MAX_SCREEN) {
+	else if (screenNumber > DELAY_SCREEN) {
 		screenNumber = INSIDE_SCREEN;
 	}
 
@@ -206,7 +219,7 @@ void setScreen(int screenNumber) {
 
 void updateScreen(bool force)
 {
-	if (force || millis() - lastScreenUpd > 300)
+	if (force || millis() - lastScreenUpd > 0)
 	{
 		lastScreenUpd += 300;
 
@@ -218,10 +231,11 @@ void updateScreen(bool force)
 		case OUTSIDE_SCREEN:
 			printTemp(currentTemp[OUTSIDE_DHT], currentHum[OUTSIDE_DHT]);
 			break;
-		case MIN_SCREEN:
-		case MAX_SCREEN:
-			printRange();
+		case TEMP_SCREEN:
+			printTemp();
 			break;
+		case DELAY_SCREEN:
+			printDelay();
 		default:
 			break;
 		}
@@ -231,19 +245,42 @@ void updateScreen(bool force)
 			peltier.isHot() ? "H" :
 			peltier.isCold() ? "C" : " ";
 		lcd.print(pstate);
-
 	}
 
 	blinkPeltierState();
 }
 
-void printRange()
+void printDelay()
+{
+	char buff[16];
+	char strHs[2];
+	char strMin[2];
+
+	lcd.setCursor(1, 1);
+
+	int hs = 0;
+	int min = 0;
+	int sec = 0;
+
+	if (delaySecs > 0)
+	{
+		hs = delaySecs / 60 / 60;
+		min = delaySecs / 60 - hs * 60;
+		sec = delaySecs - hs * 60 * 60 - min * 60;
+	}
+
+	sprintf(buff, "   %02d:%02d:%02d  ", hs, min, sec);
+
+	lcd.print(buff);
+}
+
+void printTemp()
 {
 	char buff[16];
 
 	lcd.setCursor(1, 1);
 
-	sprintf(buff, "  %dc -- %dc", tempMin, tempMax);
+	sprintf(buff, "      %dc     ", tempMin);
 
 	lcd.print(buff);
 }
@@ -254,7 +291,7 @@ void printTemp(float temp, int hum)
 	char buff2[16];
 	lcd.setCursor(1, 1);
 
-	sprintf(buff1, " %sc - %2d%%", f(buff2, temp), hum);
+	sprintf(buff1, "  %sc - %2d%%   ", f(buff2, temp), hum);
 
 	lcd.print(buff1);
 }
@@ -262,17 +299,20 @@ void printTemp(float temp, int hum)
 void togglePeltier()
 {
 	int state = peltier.getCurrentState();
-	if (currentTemp[OUTSIDE_DHT] <= tempMin &&
+	if (delaySecs > 0) {
+		state = peltier.PELTIER_OFF;
+	}
+	else if (currentTemp[OUTSIDE_DHT] <= tempMin &&
 		currentTemp[INSIDE_DHT] <= tempMin)
 	{
 		// HOT mode. temperature outside is lower than the minTem
-		//			 needs to keep the temp higher.
+		//			 needs to raise the temp.
 
-		// only want to turn on when the inner temperature 
-		// is lower or equal to minTemp 
+		// Turn on when the inner temperature is lower or equal to minTemp 
 		state = peltier.PELTIER_HOT;
 	}
-	else if (currentTemp[OUTSIDE_DHT] >= tempMax &&
+	else if (
+		currentTemp[OUTSIDE_DHT] >= tempMax &&
 		currentTemp[INSIDE_DHT] >= tempMax)
 	{
 		// COLD mode. temperature outside is higher than the maxTem
@@ -282,13 +322,18 @@ void togglePeltier()
 		// is higher or equal than maxTemp 
 		state = peltier.PELTIER_COLD;
 	}
-	else if (currentTemp[OUTSIDE_DHT] > tempMin && currentTemp[OUTSIDE_DHT] < tempMax || //outside in range
+	else if (
+		currentTemp[OUTSIDE_DHT] > tempMin && currentTemp[OUTSIDE_DHT] < tempMax || //outside in range
 		currentTemp[OUTSIDE_DHT] > tempMax && currentTemp[INSIDE_DHT] <= tempMin || //outside hot inside in bottom
-		currentTemp[OUTSIDE_DHT] < tempMin && currentTemp[INSIDE_DHT] >= tempMax)	//outside cold insite in top
+		currentTemp[OUTSIDE_DHT] < tempMin && currentTemp[INSIDE_DHT] >= tempMax)	//outside cold inside in top
 	{
-		// else is when the outside temp is between the min and max temp, then the peltier is no needed.
+		// else when the outside temp is between the min and max temp, then the peltier is no needed.
+		//      when the outside temp is above max temp, and inside is below min, shut down peltier.
+		//		when the outside temp is below min temp, and inside is above max, shut down peltier.
 		state = peltier.PELTIER_OFF;
 	}
+
+	// else no change.
 
 	peltier.turn(state);
 }
@@ -296,9 +341,14 @@ void togglePeltier()
 
 void blinkPeltierState()
 {
-	unsigned long secs = millis() / 500;
-	if (secs % 3 == 0)
+	unsigned long hsecs = millis() / 500;
+	if (hsecs % 3 == 0)
 	{
+		if (delaySecs > 0)
+		{
+			lcd.printPause(0, 1);
+			return;
+		}
 		if (peltier.getCurrentState() == peltier.PELTIER_HOT)
 		{
 			lcd.printArrowUp(0, 1);
@@ -312,25 +362,6 @@ void blinkPeltierState()
 	}
 
 	lcd.printEmpty(0, 1);
-}
-
-
-// Format string up to 512 chars
-void sprintln(char* msg, ...) {
-	/* Declare a va_list type variable */
-	va_list argList;
-	char buffer[512] = { 0 };
-
-	/* Initialise the va_list variable with the ... after fmt */
-	va_start(argList, msg);
-
-	/* format */
-	vsprintf(buffer, msg, argList);
-
-	Serial.println(buffer);
-
-	/* Clean up the va_list */
-	va_end(argList);
 }
 
 char* f(char* buffer, float value)

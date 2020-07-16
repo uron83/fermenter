@@ -27,6 +27,7 @@ class LcdKeypad{
     void autoToggleBacklight();
     void printArrowUp(int x, int y);
     void printArrowDown(int x, int y);
+    void printPause(int x, int y);
     void printEmpty(int x, int y);
   private:
     //LCD pin to Arduino

@@ -9,6 +9,7 @@
 #define SafeBLoff(pin) pinMode(pin, OUTPUT)
 #define CharUp byte(0)
 #define CharDown byte(1)
+#define CharPause byte(2)
 
 byte charUp[8] = {
   B00100,
@@ -18,10 +19,12 @@ byte charUp[8] = {
   B00100,
   B00100,
   B00100,
+  B00000,
 };
 
 byte charDown[8]
 {
+  B00000,
   B00100,
   B00100,
   B00100,
@@ -29,6 +32,18 @@ byte charDown[8]
   B11111,
   B01110,
   B00100,
+};
+
+byte charPause[8]
+{
+  B00000,
+  B01010,
+  B01010,
+  B01010,
+  B01010,
+  B01010,
+  B01010,
+  B00000,
 };
 
 LcdKeypad::LcdKeypad(int dummy) {
@@ -89,8 +104,9 @@ void LcdKeypad::autoToggleBacklight() {
 }
 
 void LcdKeypad::setup() {
-	this->lcd->createChar(0, charUp);
-	this->lcd->createChar(1, charDown);
+	this->lcd->createChar(CharUp, charUp);
+	this->lcd->createChar(CharDown, charDown);
+	this->lcd->createChar(CharPause, charPause);
 	this->lcd->begin(16, 2);
 }
 
@@ -118,6 +134,11 @@ void LcdKeypad::printArrowUp(int x, int y) {
 void LcdKeypad::printArrowDown(int x, int y) {
 	this->setCursor(x, y);
 	this->lcd->write(CharDown);
+}
+
+void LcdKeypad::printPause(int x, int y) {
+	this->setCursor(x, y);
+	this->lcd->write(CharPause);
 }
 
 void LcdKeypad::printEmpty(int x, int y) {

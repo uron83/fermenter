@@ -1,12 +1,14 @@
 // 
 // 
 // 
-#define DEBUG   //If you comment this line, the DPRINT & DPRINTLN lines are defined as blank.
+#ifndef  _DEBUG
+//#define _DEBUG
+#endif // ! _DEBUG
 
 #include "Peltier.h"
 
 #ifndef DPRINT
-#ifdef DEBUG    //Macros are usually in all capital letters.
+#ifdef _DEBUG    //Macros are usually in all capital letters.
 #define DPRINT(...)    Serial.print(__VA_ARGS__)     //DPRINT is a macro, debug print
 #define DPRINTLN(...)  Serial.println(__VA_ARGS__)   //DPRINTLN is a macro, debug print with new line
 #else
@@ -16,7 +18,8 @@
 #endif
 
 
-Peltier::Peltier(unsigned int rpwm, unsigned int lpwm, unsigned int coolers) {
+Peltier::Peltier(unsigned int rpwm, unsigned int lpwm, unsigned int coolers)
+{
 	this->rpwm = rpwm;
 	this->lpwm = lpwm;
 	this->coolers = coolers;
@@ -36,8 +39,8 @@ void Peltier::setup()
 
 // Tries to set the Peltier state, prevent hot to cold and vice-versa sudden changes.
 // use getCurrentState to determine whether the state was correclty set.
-void Peltier::turn(unsigned short state) {
-	
+void Peltier::turn(unsigned short state)
+{
 	if (this->currentState != state)
 	{
 
@@ -80,7 +83,8 @@ void Peltier::turn(unsigned short state) {
 
 // returns a value indicating wether the the peliter is Cold. 
 // Retains the value after a period of time after it is turned off.
-bool Peltier::isCold() {
+bool Peltier::isCold() 
+{
 	long diff = millis() - this->millisSincePhysicalState;
 	return
 		this->currentState == PELTIER_COLD && diff >= CONSIDER_PHYSICAL_STATE ||
@@ -91,7 +95,8 @@ bool Peltier::isCold() {
 
 // returns a value indicating wether the the peliter is Hot. 
 // Retains the value after a period of time after it is turned off.
-bool Peltier::isHot(){
+bool Peltier::isHot()
+{
 	long diff = millis() - this->millisSincePhysicalState;
 	return
 		this->currentState == PELTIER_HOT && diff >= CONSIDER_PHYSICAL_STATE ||
@@ -105,7 +110,7 @@ unsigned short Peltier::getCurrentState() {
 }
 
 // private method to change turn hot, cold and off the peltier. 
-// sudden changes handled by public turn method.
+// sudden changes are handled by public method turn().
 void Peltier::updatePhysicalState()
 {
 	if (this->currentState == PELTIER_HOT)
@@ -113,14 +118,12 @@ void Peltier::updatePhysicalState()
 		digitalWrite(this->lpwm, LOW);
 		digitalWrite(this->rpwm, HIGH);
 		digitalWrite(this->coolers, HIGH);
-
 	}
 	else if (this->currentState == PELTIER_COLD)
 	{
 		digitalWrite(this->lpwm, HIGH);
 		digitalWrite(this->rpwm, LOW);
 		digitalWrite(this->coolers, HIGH);
-
 	}
 	else
 	{
