@@ -16,8 +16,9 @@ This code runs on an Arduino UNO
 
   # Connection diagram
 This diagram is for illustration purposes only and is not an exact representation of the final result.
-https://wokwi.com/projects/377011821229324289
   ![image](https://github.com/uron83/fermenter/assets/13381582/39977fab-4b40-4d80-8e1b-e50b70dbffa9)
+  
+  [Made with Wowki](https://wokwi.com/projects/377011821229324289)
   
 
   # Pinout
