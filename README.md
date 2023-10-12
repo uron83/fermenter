@@ -15,7 +15,9 @@ This code runs on an Arduino UNO
 - 1x 12v 6A 75w switching power supply: https://www.ebay.com.au/itm/402600818586
 
   # Connection diagram
+This diagram is for illustration purposes only and is not an exact representation of the final result.
   ![image](https://github.com/uron83/fermenter/assets/13381582/39977fab-4b40-4d80-8e1b-e50b70dbffa9)
+  
 
   # Pinout
 | Component | Pin  | Arduino | Other  |
@@ -53,5 +55,5 @@ This code runs on an Arduino UNO
 |  | SIG  |  D2 |   |
 |  | V+  |   | Coolers + (red)  |
 |  | V-  |   | Coolers - (black) |
-|  | VIN  |   | 12v  |
+|  | VIN  |   | PS 12v  |
 |  | GND  |   | PS GND  |
