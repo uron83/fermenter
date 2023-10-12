@@ -31,9 +31,6 @@
 #define  INSIDE_DHT 0
 #define  OUTSIDE_DHT 1
 
-#define HG7881_B_IA 2 // D10 --> Motor B Input A --> MOTOR B +
-#define HG7881_B_IB 3 // D11 --> Motor B Input B --> MOTOR B -
-
 // functional connections
 
 #define LPWM 2
@@ -45,7 +42,6 @@
 #define TEMP_MAX_LIMIT 35
 
 #define TEMP_RANGE 1
-
 
 //Constants
 // Initialize DHT sensor for normal 16mhz Arduino
